@@ -105,7 +105,7 @@ def get_correct_sized_string(targetSize, figType, wdh=10, matSize=100, thresh=10
         test += 1
 
         if test <= wdh:
-            if not mindiff or abs(min_it) < mindiff:
+            if not mindiff or abs(min_it) < abs(mindiff):
                 ms = get_minimum_string(sd, stringlist, min_it)
                 return get_correct_sized_string(targetSize, figType, wdh=wdh, matSize=matSize, thresh=thresh, n=n, test=test,
                                          mindiff=min_it, minstring=ms, nlist=nlist)
@@ -123,8 +123,8 @@ def create_figure(figType, genMode, outfolder, size=1, points=1, fignr=0):
         data = make_string(points, figType)
         size_or_number = f'{points}-pkt'
     elif genMode == 'size':
-        data = get_correct_sized_string(size, figType, wdh=10, matSize=100, thresh=10)
-        size_or_number = f'{size}-B'
+        data = get_correct_sized_string(size, figType, wdh=1000, matSize=100, thresh=5)
+        size_or_number = f'{len(data)}-B'
     else:
         raise ValueError
 
@@ -160,29 +160,29 @@ def get_good_start_vals(nlist, wdh, figType):
     print('Mit welchem Faktor kann man n multiplizieren, um auf den Durchschnitt zu kommen?\n', fak_list)
 
 
+if __name__ == "__main__":
+    outfolder = 'data'
 
-outfolder = 'data'
+    figures_per_size = 10
 
-figures_per_size = 10
+    # 'point' oder 'vek' mgl.
+    figType = 'vek'
 
-# 'point' oder 'vek' mgl.
-figType = 'point'
+    # 'number' oder 'size' möglich
+    genMode = 'size'
 
-# 'number' oder 'size' möglich
-genMode = 'size'
-
-size = 1000
-pointcount = 2000
-
-
-# testfunktion, um einen Eindruck über die Startwerte für N zu erhalten
-# get_good_start_vals(nlist, wdh, figType)
+    size = 1024
+    pointcount = 2000
 
 
-for i in range(figures_per_size):
-    create_figure(figType, genMode, outfolder, size=size, points=pointcount, fignr=i)
+    # testfunktion, um einen Eindruck über die Startwerte für N zu erhalten
+    # get_good_start_vals(nlist, wdh, figType)
 
+    create_figure(figType, genMode, outfolder, size=size, points=pointcount)
 
+    # testfile = 'data/point-Fig_1024-B.bxy'
+    #
+    # print(get_size_of_file(testfile))
 
 
 
