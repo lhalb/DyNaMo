@@ -1,6 +1,7 @@
 import numpy as np
 import statistics
 from os import path
+import math
 
 def get_xy(n, figType):
     x_numbers = np.random.randint(0, 65535+1, n)
@@ -90,10 +91,11 @@ def get_correct_sized_string_loop(targetsize, figtype, maxwdh, thresh=10, verbos
     minstring = get_minimum_string(targetsize, stringlist, d_min_glob)
 
     trys = 0
-    n_fak = 10000
+    fak_exp = math.floor(math.log10(targetsize)) - 1
+    n_fak = int(1*10**fak_exp)
     while d_min_glob != 0:
         if verbose:
-            print('{n}, {d_min}, {d_min_glob}, {try}')
+            print(f'{n}, {d_min}, {d_min_glob}, {trys}')
 
         if trys > maxwdh:
             break
@@ -184,8 +186,8 @@ if __name__ == "__main__":
     # 'number' oder 'size' möglich
     genMode = 'size'
     # Faktoren für KB
-    faks = [#1, 2, 3, 4, 5, 6, 7,8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800,
-            900, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
+    faks = [#1, 2, 3, 4, 5, 6, 7,8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
+             2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
             10000, 100000, 200000]
     # faks = [1]
     size = [x*1024 for x in faks]
@@ -198,7 +200,7 @@ if __name__ == "__main__":
 
     for s, f in zip(size, faks):
         print(f'Faktor: {f}, Size:{s}')
-        create_figure(figType, genMode, outfolder, size=s, points=pointcount, verbose=False)
+        create_figure(figType, genMode, outfolder, size=s, points=pointcount, verbose=True)
 
     # testfile = 'data/point-Fig_1024-B.bxy'
     #
