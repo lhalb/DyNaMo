@@ -28,7 +28,7 @@ def make_string(n, figType):
         foot = None
         retString = '\n'.join([*body])
     else:
-        head = 'DATA'
+        head = '# Vector\n# Float\nDATA'
         foot = 'EOF'
 
         string = ['ABS'] * n
@@ -37,94 +37,105 @@ def make_string(n, figType):
         retString = '\n'.join([head, *body, foot])
     return retString
 
+
 def get_size_of_fig(s):
     return len(s)
 
 
-def get_correct_sized_string(targetSize, figType, wdh=10, matSize=100, thresh=10, n=None, nlist=[], mindiff=None, minstring=None, test=0, status=False):
-    """
-    Startwerte für Faktor size = fak*n (empirisch ermittelt):
-        Vektorfiguren
-            n < 10: fak < 30
-            n >=10: 18< fak < 20
-            n > 100: fak < 18.5
-        Punktfiguren
-            n >= 1: fak < 10
-    :param targetSize: Größe, die Die Figur haben soll
-    :param wdh: wie oft soll getestet werden, bis Optimum erreicht ist?
-    :param matSize: wie viele Möglichkeiten sollen gleichzeitig getestet werden? --> erhöht Speicherbedarf
-    :param thresh: auf wie viele Bytes genau soll die Figur gefunden werden?
-    :return: Figurstring
-    """
-    def get_minimum_string(dl, sl, min_diff):
+def get_correct_sized_string_loop(targetsize, figtype, maxwdh, thresh=10, verbose=False):
+    def get_minimum_string(ts, sl, min_diff):
+        ll = list(map(len, sl))
+        dl = [x - ts for x in ll]
         # speichere den Index des aktuellen Minimums
         min_idx = dl.index(min_diff)
         # suche diesen Index in der Stringliste
         ret_val = sl[min_idx]
         return ret_val
 
+    def create_stringlist(n, figtype, matsize):
+        return [make_string(n, figtype) for i in range(matsize)]
+
+    def get_dmin(ts, sl):
+        lenlist = list(map(len, sl))
+
+        sd = [x - ts for x in lenlist]
+
+        return min(sd)
+
     if figType == 'point':
         # diesen Faktor einstellen, wenn die Routine ewig keine Ergebnisse liefert
-        fak = 9
+        fak = 12
 
     if figType == 'vek':
-        fak = 15
+        fak = 20
 
-    if not n:
-        n = int(targetSize / fak)
-        nlist.append(n)
-
-    stringlist = [make_string(n, figType) for i in range(matSize)]
-
-    lenlist = list(map(len, stringlist))
-
-    # print(lenlist)
-    sd = [x - targetSize for x in lenlist]
-
-    # print(sd)
-
-    min_it, max_it = min(sd), max(sd)
-
-    # print(min_it, max_it)
-    # print(nlist)
-
-    # wenn die kleinste Differenz zu groß ist
-    if min_it > thresh:
-        n -= 1
-    elif max_it < thresh:
-        n += 1
-        # wenn diese Anzahl an Punkten noch nicht getestet wurde
-    elif min_it == 0:
-        return get_minimum_string(sd, stringlist, min_it)
-
-    if n not in nlist:
-        nlist.append(n)
-        return get_correct_sized_string(targetSize, figType, wdh=wdh, matSize=matSize, thresh=thresh, n=n, nlist=nlist)
+    if targetsize < 1e5:
+        matsize = 50
+    elif targetsize < 1e6:
+        matsize = 25
+    elif targetsize < 1e7:
+        matsize = 15
     else:
-        # zähle die Testvariable 1 hoch
-        test += 1
+        matsize = 10
 
-        if test <= wdh:
-            if not mindiff or abs(min_it) < abs(mindiff):
-                ms = get_minimum_string(sd, stringlist, min_it)
-                return get_correct_sized_string(targetSize, figType, wdh=wdh, matSize=matSize, thresh=thresh, n=n, test=test,
-                                         mindiff=min_it, minstring=ms, nlist=nlist)
-            else:
-                ms = minstring
-                return get_correct_sized_string(targetSize, figType, wdh=wdh, matSize=matSize, thresh=thresh, n=n, test=test,
-                                         mindiff=mindiff, minstring=ms, nlist=nlist)
 
+    nlist = []
+    n = int(targetsize / fak)
+
+    stringlist = create_stringlist(n, figtype, matsize)
+    d_min = get_dmin(targetsize, stringlist)
+
+    d_min_glob = d_min
+
+    minstring = get_minimum_string(targetsize, stringlist, d_min_glob)
+
+    trys = 0
+    n_fak = 10000
+    while d_min_glob != 0:
+        if verbose:
+            print('{n}, {d_min}, {d_min_glob}, {try}')
+
+        if trys > maxwdh:
+            break
+        if d_min_glob < -thresh and d_min < -thresh:
+            n += 1*n_fak
+            nlist.append(n)
+        elif d_min_glob > thresh and d_min < -thresh:
+            n += 1 * n_fak
+            nlist.append(n)
+        elif d_min_glob < -thresh and d_min > -thresh:
+            n -= 1*n_fak
+            if n_fak > 1:
+                n_fak = int(n_fak*0.1)
+            nlist.append(n)
+        elif d_min_glob > thresh and d_min > thresh:
+            n -= 1*n_fak
+            if n_fak > 1:
+                n_fak = int(n_fak*0.1)
+            nlist.append(n)
         else:
-            return minstring
+            trys += 1
+        stringlist = create_stringlist(n, figtype, matsize)
+        d_min = get_dmin(targetsize, stringlist)
+        if d_min == 0:
+            minstring = get_minimum_string(targetsize, stringlist, d_min)
+        if abs(d_min) < abs(d_min_glob):
+            d_min_glob = d_min
+            minstring = get_minimum_string(targetsize, stringlist, d_min_glob)
 
 
-def create_figure(figType, genMode, outfolder, size=1, points=1, fignr=0):
+
+    return minstring
+
+
+def create_figure(figType, genMode, outfolder, size=1, points=1, fignr=0, verbose=False):
     if genMode == 'number':
         data = make_string(points, figType)
-        size_or_number = f'{points}-pkt'
+        size_or_number = f'{points}-pkt_{len(data)}-B'
     elif genMode == 'size':
-        data = get_correct_sized_string(size, figType, wdh=1000, matSize=100, thresh=5)
-        size_or_number = f'{len(data)}-B'
+        data = get_correct_sized_string_loop(size, figType, maxwdh=100, thresh=10, verbose=verbose)
+        points = len(data.split("\n"))
+        size_or_number = f'{len(data)}-B_{points}-pkt'
     else:
         raise ValueError
 
@@ -140,10 +151,12 @@ def create_figure(figType, genMode, outfolder, size=1, points=1, fignr=0):
 
 
 def get_size_of_file(fname):
-    with open(fname) as f:
+    with open(fname, "r") as f:
         data = f.read()
 
-    return len(data)
+    lines = len(data.split("\n"))
+
+    return len(data), lines
 
 
 def get_good_start_vals(nlist, wdh, figType):
@@ -163,22 +176,29 @@ def get_good_start_vals(nlist, wdh, figType):
 if __name__ == "__main__":
     outfolder = 'data'
 
-    figures_per_size = 10
+    # figures_per_size = 10
 
     # 'point' oder 'vek' mgl.
     figType = 'vek'
 
     # 'number' oder 'size' möglich
     genMode = 'size'
+    # Faktoren für KB
+    faks = [#1, 2, 3, 4, 5, 6, 7,8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800,
+            900, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
+            10000, 100000, 200000]
+    # faks = [1]
+    size = [x*1024 for x in faks]
 
-    size = 1024
-    pointcount = 2000
+    pointcount = [x * 10 for x in faks]
 
 
     # testfunktion, um einen Eindruck über die Startwerte für N zu erhalten
     # get_good_start_vals(nlist, wdh, figType)
 
-    create_figure(figType, genMode, outfolder, size=size, points=pointcount)
+    for s, f in zip(size, faks):
+        print(f'Faktor: {f}, Size:{s}')
+        create_figure(figType, genMode, outfolder, size=s, points=pointcount, verbose=False)
 
     # testfile = 'data/point-Fig_1024-B.bxy'
     #
