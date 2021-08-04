@@ -43,6 +43,55 @@ def get_size_of_fig(s):
     return len(s)
 
 
+def get_quick_sized_string(targetsize, figtype, mode='med', verbose=False):
+    if figtype == 'vek':
+        strings = {
+            'min'  : 'ABS 0 0\n',                      # 8 byte
+            'small': 'ABS 0.1 0.1\n',                # 12 byte
+            'med'  : 'ABS 0.001 0.001\n',            # 16 byte
+            'big'  : 'ABS 0.00001 0.00001\n',        # 20 byte
+            'max'  : 'ABS -0.000001 -0.000001\n'     # 24 byte
+        }
+        head = '# Vector\n'
+        foot = 'END\nEOF\n'
+    elif figtype == 'point':
+        strings = {
+            'min': '0 0\n',              # 4 byte
+            'small': '10 10\n',          # 6 byte
+            'med': '100 100\n',          # 8 byte
+            'big': '1000 1000\n',        # 10 byte
+            'max': '10000 10000\n'       # 12 byte
+        }
+        head = ''
+        foot = ''
+    else:
+        print('Falschen Figurtyp angegeben')
+        return False
+
+    static_len = len(head + foot)
+    full_anz = math.floor((targetsize-static_len)/len(strings[mode]))
+    rest = (targetsize-static_len) % len(strings[mode])
+
+    len_list = [len(x) for x in strings.values()]
+
+    if rest < min(len_list):
+        return full_anz
+
+    for i in reversed(len_list):
+        if i > rest:
+            continue
+        elif i == rest:
+            index = i
+            anz = 1
+        else:
+            add = math.floor(rest / i)
+            rest = rest % i
+    # TODO: Den String in der Liste suchen und zu dem schon gefundenen addieren
+    # TODO: Strings verbinden und ausgeben
+
+    return full_anz
+
+
 def get_correct_sized_string_loop(targetsize, figtype, maxwdh, thresh=10, verbose=False):
     def get_minimum_string(ts, sl, min_diff):
         ll = list(map(len, sl))
@@ -198,9 +247,12 @@ if __name__ == "__main__":
     # testfunktion, um einen Eindruck über die Startwerte für N zu erhalten
     # get_good_start_vals(nlist, wdh, figType)
 
-    for s, f in zip(size, faks):
-        print(f'Faktor: {f}, Size:{s}')
-        create_figure(figType, genMode, outfolder, size=s, points=pointcount, verbose=True)
+    # for s, f in zip(size, faks):
+    #     print(f'Faktor: {f}, Size:{s}')
+
+    #     create_figure(figType, genMode, outfolder, size=s, points=pointcount, verbose=True)
+
+    print(get_quick_sized_string(size[0], figType))
 
     # testfile = 'data/point-Fig_1024-B.bxy'
     #
