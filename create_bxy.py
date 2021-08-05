@@ -2,6 +2,7 @@ import numpy as np
 import statistics
 from os import path
 import math
+from time import time
 
 def get_xy(n, figType):
     x_numbers = np.random.randint(0, 65535+1, n)
@@ -19,6 +20,7 @@ def get_xy(n, figType):
 
 
 def make_string(n, figType):
+    n = int(n)
     # Daten erzeugen
     array = get_xy(n, figType)
 
@@ -72,24 +74,32 @@ def get_quick_sized_string(targetsize, figtype, mode='med', verbose=False):
     full_anz = math.floor((targetsize-static_len)/len(strings[mode]))
     rest = (targetsize-static_len) % len(strings[mode])
 
+    body = strings[mode]*full_anz
+
     len_list = [len(x) for x in strings.values()]
 
     if rest < min(len_list):
-        return full_anz
+        pass
+    else:
+        for i in reversed(len_list):
+            if i > rest:
+                continue
+            elif i == rest:
+                idx_elem = len_list.index(i)
+                body += list(strings.values())[idx_elem]
+                full_anz += 1
+                break
+            else:
+                anz = math.floor(rest / i)
+                idx_elem = len_list.index(i)
+                body += anz * list(strings.values())[idx_elem]
+                full_anz += anz
+                rest = rest % i
 
-    for i in reversed(len_list):
-        if i > rest:
-            continue
-        elif i == rest:
-            index = i
-            anz = 1
-        else:
-            add = math.floor(rest / i)
-            rest = rest % i
-    # TODO: Den String in der Liste suchen und zu dem schon gefundenen addieren
-    # TODO: Strings verbinden und ausgeben
+    if verbose:
+        print(f'Figur erfolgreich erzeugt\nGenauigkeit: {rest}, Punkte: {full_anz}')
 
-    return full_anz
+    return head + body + foot, full_anz
 
 
 def get_correct_sized_string_loop(targetsize, figtype, maxwdh, thresh=10, verbose=False):
@@ -179,15 +189,25 @@ def get_correct_sized_string_loop(targetsize, figtype, maxwdh, thresh=10, verbos
     return minstring
 
 
-def create_figure(figType, genMode, outfolder, size=1, points=1, fignr=0, verbose=False):
-    if genMode == 'number':
+def create_figure(figType, figure_mode, outfolder, size_mode='rough', size=1, points=1, fignr=0, bytesize='med', verbose=False):
+    if figure_mode == 'number':
         data = make_string(points, figType)
         size_or_number = f'{points}-pkt_{len(data)}-B'
-    elif genMode == 'size':
-        data = get_correct_sized_string_loop(size, figType, maxwdh=100, thresh=10, verbose=verbose)
-        points = len(data.split("\n"))
-        size_or_number = f'{len(data)}-B_{points}-pkt'
+    elif figure_mode == 'size':
+        if size_mode == 'rough':
+            data, points = get_quick_sized_string(size, figType, bytesize)
+        elif size_mode == 'precise':
+            data = get_correct_sized_string_loop(size, figType, maxwdh=100, thresh=10, verbose=verbose)
+            points = len(data.split("\n"))
+        else:
+            print(f'Der Berechnungsmodus >{size_mode}< ist nicht bekannt.')
+            raise ValueError
+        if size_mode == 'precise':
+            size_or_number = f'{len(data)}-B_{points}-pkt'
+        else:
+            size_or_number = f'{len(data)}-B_{bytesize}_{points}-pkt'
     else:
+        print(f'Der Figurtyp >{figure_mode}< ist nicht bekannt')
         raise ValueError
 
     if fignr > 0:
@@ -195,7 +215,7 @@ def create_figure(figType, genMode, outfolder, size=1, points=1, fignr=0, verbos
     else:
         nr = ''
 
-    outfile = f'{figType}-Fig_{size_or_number}{nr}.bxy'
+    outfile = f'{figType}-Fig_{figure_mode}_{size_or_number}{nr}.bxy'
     out = path.join(outfolder, outfile)
     with open(out, 'w') as f:
         f.write(data)
@@ -224,37 +244,78 @@ def get_good_start_vals(nlist, wdh, figType):
     print('Mit welchem Faktor kann man n multiplizieren, um auf den Durchschnitt zu kommen?\n', fak_list)
 
 
+def loop_parameters(FT, GM, CM, PC=None, S=None, F=None, BS=None, verb=False):
+    for ft in FT:
+        for gm in GM:
+            if gm == 'size':
+                if CM == 'rough':
+                    for bs in BS:
+                        for s, f in zip(S, F):
+                            t1 = time()
+                            create_figure(ft, gm, outfolder, size=s, size_mode=CM, bytesize=bs, verbose=verb)
+                            t2 = time()
+
+                            print(f'Faktor: {f}, Groesse: {s}\nZeit zur Bearbeitung {t2 - t1}s \n')
+                else:
+                    for s, f in zip(S, F):
+                        t1 = time()
+                        create_figure(ft, gm, outfolder, size=s, size_mode=CM, verbose=verb)
+                        t2 = time()
+
+                        print(f'Faktor: {f}, Groesse: {s}\nZeit zur Bearbeitung {t2 - t1}s \n')
+
+            if gm == 'number':
+                for p, f in zip(PC, F):
+                    t1 = time()
+                    create_figure(ft, gm, outfolder, points=p, verbose=verb)
+                    t2 = time()
+
+                    print(f'Faktor: {f}, Punkte: {p}\nZeit zur Bearbeitung {t2 - t1}s \n')
+
+
 if __name__ == "__main__":
     outfolder = 'data'
 
     # figures_per_size = 10
 
     # 'point' oder 'vek' mgl.
-    figType = 'vek'
+    figType = ['vek', 'point']
+
+    bytesize = ['small', 'big', 'med']
 
     # 'number' oder 'size' möglich
-    genMode = 'size'
-    # Faktoren für KB
-    faks = [#1, 2, 3, 4, 5, 6, 7,8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
-             2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
-            10000, 100000, 200000]
-    # faks = [1]
-    size = [x*1024 for x in faks]
+    genMode = ['size']
 
-    pointcount = [x * 10 for x in faks]
+    # 'rough' oder 'precise' mgl.
+    # --> 'precise' benötigt tw. immense Speichermengen und ist extrem langsam bei großen Dateien
+    # --> sollte nur bei Dateien bis 100 KB eingesetzt werden
+    calc_mode = 'rough'
+
+    v = True
+
+
+    # Faktoren für KB
+    # faks = [1, 1000, 1e5]
+    faks = [1, 2, 3, 4, 5, 6, 7, 8, 9,
+            10, 20, 30, 40, 50, 60, 70, 80, 90,
+            100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
+            1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
+            1e4, 2e4, 3e4, 4e4, 5e4, 6e4, 7e4, 8e4, 9e4,
+            1e5, 2e5]
+
+
+    size = [int(x*1000) for x in faks]
+    pointcount = [int(x * 10) for x in faks]
 
 
     # testfunktion, um einen Eindruck über die Startwerte für N zu erhalten
     # get_good_start_vals(nlist, wdh, figType)
 
-    # for s, f in zip(size, faks):
-    #     print(f'Faktor: {f}, Size:{s}')
+    # Funktion, um alle Parameter durchzutesten
+    loop_parameters(FT=figType, GM=genMode, CM=calc_mode, PC=pointcount, S=size, F=faks, BS=bytesize, verb=v)
 
-    #     create_figure(figType, genMode, outfolder, size=s, points=pointcount, verbose=True)
 
-    print(get_quick_sized_string(size[0], figType))
-
-    # testfile = 'data/point-Fig_1024-B.bxy'
+    # testfile = 'data/vek-Fig_size_99999993-B_min_12499997-pkt.bxy'
     #
     # print(get_size_of_file(testfile))
 
