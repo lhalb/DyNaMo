@@ -45,18 +45,20 @@ def get_all_files(p):
     filelist = [f for f in listdir(mypath) if isfile(join(mypath, f))]
     return filelist
 
-mypath = "D:\\PROJEKTE\\02_Halbauer\\DyNaMo\\Figurdateien-original"
-outfolder = "D:\\PROJEKTE\\02_Halbauer\\DyNaMo\\Figurdateien-kopiert"
 
-df = make_dataframe_from_files(get_all_files(mypath))
-#
-# # print(df.head())
-# df.to_excel("overview_files.xlsx",
-#             sheet_name='Überblick')
+if __name__ == '__main__':
+    mypath = "D:\\PROJEKTE\\02_Halbauer\\DyNaMo\\Figurdateien-original"
+    outfolder = "D:\\PROJEKTE\\02_Halbauer\\DyNaMo\\Figurdateien-kopiert"
 
-for idx, fname in zip(df.index, df['orig']):
-    src = join(mypath, fname)
-    dest = join(outfolder, str(df['name'][idx]) + '.bxy')
+    df = make_dataframe_from_files(get_all_files(mypath))
+    #
+    # # print(df.head())
+    df.to_excel("overview_files.xlsx",
+                 sheet_name='Überblick')
 
-    copyfile(src, dest)
+    for idx, fname in zip(df.index, df['orig']):
+        src = join(mypath, fname)
+        dest = join(outfolder, str(df['name'][idx]) + '.bxy')
+
+        copyfile(src, dest)
 

@@ -274,14 +274,14 @@ def loop_parameters(FT, GM, CM, PC=None, S=None, F=None, BS=None, verb=False):
 
 
 if __name__ == "__main__":
-    outfolder = 'data'
+    outfolder = r'D:\PROJEKTE\02_Halbauer\DyNaMo\Figuren_neu_orig'
 
     # figures_per_size = 10
 
     # 'point' oder 'vek' mgl.
     figType = ['vek', 'point']
 
-    bytesize = ['small', 'big', 'med']
+    bytesize = ['min', 'small', 'big', 'med', 'max']
 
     # 'number' oder 'size' möglich
     genMode = ['size']
