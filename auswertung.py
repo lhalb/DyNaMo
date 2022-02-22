@@ -1,9 +1,10 @@
-import os
+from tqdm import tqdm
 from shutil import copyfile
 import pandas as pd
-import numpy as np
 from os import listdir
 from os.path import isfile, join
+from time import sleep
+
 
 def make_dataframe_from_files(files):
     df = pd.DataFrame({'orig': files})
@@ -39,24 +40,31 @@ def make_dataframe_from_files(files):
     # Entferne leere Zellen für Export
     df.fillna('', inplace=True)
 
+    df['ext'] = [s.split('.')[1] for s in df['orig']]
+
     return df
+
 
 def get_all_files(p):
     filelist = [f for f in listdir(mypath) if isfile(join(mypath, f))]
     return filelist
 
-mypath = "D:\\PROJEKTE\\02_Halbauer\\DyNaMo\\Figurdateien-original"
-outfolder = "D:\\PROJEKTE\\02_Halbauer\\DyNaMo\\Figurdateien-kopiert"
 
-df = make_dataframe_from_files(get_all_files(mypath))
-#
-# # print(df.head())
-# df.to_excel("overview_files.xlsx",
-#             sheet_name='Überblick')
+if __name__ == '__main__':
+    mypath = "D:\\figs_neu"
+    outfolder = "D:\\figs_copy"
 
-for idx, fname in zip(df.index, df['orig']):
-    src = join(mypath, fname)
-    dest = join(outfolder, str(df['name'][idx]) + '.bxy')
+    df = make_dataframe_from_files(get_all_files(mypath))
+    #
+    # # print(df.head())
+    df.to_excel(join(outfolder, "overview_files.xlsx"),
+                sheet_name='Überblick')
 
-    copyfile(src, dest)
+    with tqdm(total=len(df['orig'])) as pbar:
+        for idx, fname in zip(df.index, df['orig']):
+            src = join(mypath, fname)
+            dest = join(outfolder, str(df['name'][idx]) + '.' + df['ext'][idx])
 
+            copyfile(src, dest)
+            pbar.update(1)
+            sleep(0.25)
