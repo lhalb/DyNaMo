@@ -6,10 +6,8 @@ from os.path import isfile, join
 from time import sleep
 
 
-def make_dataframe_from_files(files):
+def make_dataframe_from_files(files, size_sort=False):
     df = pd.DataFrame({'orig': files})
-
-    df['name'] = range(1, len(df['orig']) + 1)
 
     # Erzeuge Liste auf Einzelstrings aus Dateinamen
     stringlist = [s.split('.')[0].split('_') for s in df['orig']]
@@ -42,6 +40,13 @@ def make_dataframe_from_files(files):
 
     df['ext'] = [s.split('.')[1] for s in df['orig']]
 
+    if size_sort:
+        df['f-size'] = pd.to_numeric(df['f-size'])
+        df = df.sort_values(by=['f-size'])
+
+    # erstelle namensspalte
+    df['name'] = range(1, len(df['orig']) + 1)
+
     return df
 
 
@@ -54,16 +59,18 @@ if __name__ == '__main__':
     mypath = "D:\\figs_neu"
     outfolder = "D:\\figs_copy"
 
-    df = make_dataframe_from_files(get_all_files(mypath))
+    sort_by_size = True
+
+    data_log = make_dataframe_from_files(get_all_files(mypath), sort_by_size)
     #
     # # print(df.head())
-    df.to_excel(join(outfolder, "overview_files.xlsx"),
-                sheet_name='Überblick')
+    data_log.to_excel(join(outfolder, "overview_files.xlsx"),
+                      sheet_name='Überblick')
 
-    with tqdm(total=len(df['orig'])) as pbar:
-        for idx, fname in zip(df.index, df['orig']):
+    with tqdm(total=len(data_log['orig'])) as pbar:
+        for idx, fname in zip(data_log.index, data_log['orig']):
             src = join(mypath, fname)
-            dest = join(outfolder, str(df['name'][idx]) + '.' + df['ext'][idx])
+            dest = join(outfolder, str(data_log['name'][idx]) + '.' + data_log['ext'][idx])
 
             copyfile(src, dest)
             pbar.update(1)
