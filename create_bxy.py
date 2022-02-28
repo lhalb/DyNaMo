@@ -45,16 +45,19 @@ def make_string(n, figType):
         body = [' '.join(x) for x in ziplist]
         head = None
         foot = None
-        retString = '\n'.join([*body])
+        return_string = '\n'.join([*body])
     else:
         head = get_vector_head()
         foot = get_vector_foot()
+        if figType == 'vek':
+            string = ['ABS'] * n
+            ziplist = list(zip(string, array[0].astype(str), array[1].astype(str)))
+            body = [' '.join(x) for x in ziplist]
+        else:   # if type == 'vek-small'
+            body = [f'ABS -1 -1\nREL 1 1 {n}']
 
-        string = ['ABS'] * n
-        ziplist = list(zip(string, array[0].astype(str), array[1].astype(str)))
-        body = [' '.join(x) for x in ziplist]
-        retString = '\n'.join([head, *body, foot])
-    return retString
+        return_string = '\n'.join([head, *body, foot])
+    return return_string
 
 
 def get_size_of_fig(s):
@@ -236,7 +239,7 @@ def create_figure(figType, figure_mode, savefolder, size_mode='rough',
 def get_extension(ft):
     if ft == 'point':
         e = '.bxy'
-    elif ft == 'vek':
+    elif 'vek' in ft:
         e = '.bvc'
     else:
         raise ValueError('Figurtyp unbekannt')
@@ -322,18 +325,18 @@ def loop_parameters(FT, GM, CM, PC=None, S=None, F=None, BS=None, verb=False):
 
 
 if __name__ == "__main__":
-    outfolder = 'D://figs_neu'
+    outfolder = 'F:\\Figs_dyn_points'
 
     # figures_per_size = 10
 
-    # 'point' oder 'vek' mgl.
-    figType = ['vek', 'point']
+    # 'point', 'vek' oder 'vek-small' mgl.
+    figType = ['vek', 'point', 'vek-small']
 
     # min, small, med, big, max mgl.
     bytesize = ['min', 'small', 'big', 'med', 'max']
 
     # 'number' oder 'size' möglich
-    genMode = ['number', 'size']
+    genMode = ['number']
 
     # 'rough' oder 'precise' mgl.
     # --> 'precise' benötigt tw. immense Speichermengen und ist extrem langsam bei großen Dateien
@@ -344,12 +347,13 @@ if __name__ == "__main__":
 
     # Faktoren für KB
     # faks = [1, 1000, 1e5]
-    faks = [1, 2, 3, 4, 5, 6, 7, 8, 9,
-            10, 20, 30, 40, 50, 60, 70, 80, 90,
-            100, 200, 300, 400, 500, 600, 700, 800, 900,
-            1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
-            1e4, 2e4, 3e4, 4e4, 5e4, 6e4, 7e4, 8e4, 9e4,
-            1e5, 2e5]
+    # faks = [1, 2, 3, 4, 5, 6, 7, 8, 9,
+    #         10, 20, 30, 40, 50, 60, 70, 80, 90,
+    #         100, 200, 300, 400, 500, 600, 700, 800, 900,
+    #         1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
+    #         1e4, 2e4, 3e4, 4e4, 5e4, 6e4, 7e4, 8e4, 9e4,
+    #         1e5, 2e5, ]
+    faks = [i*10**j for j in range(9) for i in range(1, 10)]
 
     # -----------------------------------------------------------------------------------------------------------------
     # ---------------------------------------- Ab hier beginnt eigentliches Programm ----------------------------------
