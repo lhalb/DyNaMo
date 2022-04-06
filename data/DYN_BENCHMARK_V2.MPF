@@ -1,0 +1,176 @@
+EXTERN FIG_LOAD (INT,INT,INT,INT)
+
+DEF STRING[16] _LogFileName = "DYNAMO_BM"  ; Name fuer Logfile
+DEF STRING[16] _LogFolder = "_N_LOGS_WPD"
+DEF BOOL _write_log = 1
+
+; Anzahl an fortlaufend nummerierten Figuren, die geschrieben werden sollen
+DEF INT _j_start = 1     ; Startnummer der Figuren 
+DEF INT _MAX_FIG = 189   ; Max. Nr. der Figuren
+DEF INT _WDH = 10         ; Anzahl an Wiederholungen pro Figur
+DEF INT _NrSmallFig = 1   ; Nummer einer kleinen Figur aus Autoload, die zum Minimieren des RAM dient
+DEF INT _MuMo_Nr_1 = 98   ; Figurladeplatz 1
+DEF INT _MuMo_Nr_2 = 99   ; Figurladeplatz 1
+
+DEF STRING[256] _FilePathName
+DEF INT        _I_ERROR, _i, _j
+DEF STRING[16] _today
+DEF STRING[60] _TXT_DATA
+
+; Initialisierungswerte
+DEF BOOL _MUMO_SWITCH = 0 ; Schalter fuer Figurplatzwechsel
+DEF INT _ZAEHL = 0        ; Zeilenzaehler Log
+DEF INT _n_LOG = 1        ; Logzaehler
+
+
+; Platz in MuMo auf den geschrieben werden soll
+DEF INT _MUMO_NR
+
+
+_today = "20" << $A_YEAR << "_" << $A_MONTH << "_" << $A_DAY
+
+; Gebe absoluten Dateinamen relativ zum ausfuehrenden Verzeichnis an
+_FilePathName = $P_PROGPATH << _LogFolder << "/" << _LogFileName <<"_"<< _today <<"_"<< _n_LOG 
+
+; ===============================================================
+;                  Beginn Hauptprogramm
+; ===============================================================
+INITIAL
+KALWERT(5000)
+G0 SQ 0) SL 1000)
+
+REPEAT WRITE_HEADER ENDLABEL
+MSG("Starte Figurladen mit [Cycle Start]")
+M00
+ FOR _j = _j_start TO _MAX_FIG
+  REPEAT CLEAR_RAM ENDLABEL
+  FOR _i = 1 TO _WDH
+    MSG("Lade Figur "<<_j<<" zum "<<_i<<". Mal.")      
+      REPEAT CHECK_LOG ENDLABEL
+      REPEAT SWITCH_MUMO_NR ENDLABEL  
+         ; Timer auf 0 setzen
+        $AC_TIMER[2] = 0
+         ; Zeitmessung 1
+        R250 = $AC_TIMER[2] 
+      REPEAT CALL_FIGURE ENDLABEL
+        R251 = $AC_TIMER[2] 
+      REPEAT LOAD_FIGURE ENDLABEL
+        R252 = $AC_TIMER[2] 
+      REPEAT GET_TIMER ENDLABEL
+      
+    ENDFOR
+ ENDFOR
+
+MSG("Alle Figuren getestet. Beenden mit Cycle Start")
+M00
+
+M02
+; ===============================================================
+;                    Ende Hauptprogramm
+; ===============================================================
+
+
+; ============ Unterprogramme ===========
+; ---- Dateiheader schreiben
+WRITE_HEADER:
+ IF(ISFILE(_FilePathName))
+   RET
+ ELSE
+   WRITE(_I_ERROR,_FilePathName,"# Figur-Nr. Wiederholung Platz-Nr. RAM-Zeit[s] WRT-Zeit[s] PC-Zeit-1[s] PC-Zeit-2[s]")
+   WRITE(_I_ERROR,_FilePathName, "")
+   _ZAEHL = _ZAEHL + 2
+ ENDIF
+RET
+
+; ---- Timer auslesen und in Datei schreiben
+GET_TIMER:
+  STOPRE
+  G4 F0.5
+  ; Berechnung vollstaendige Zeitdifferenz zum Figurladen
+  R255 = R251 - R250
+
+  ; Berechnung Zeitdifferenz zum Figurschreiben
+  R256 = R252 - R251
+
+  ; Berechnung Zeitdifferenz 1. PC_READ-Kommando
+  R257 = R253 - R250
+
+  ; Berechnung Zeitdifferenz 2. PC_READ-Kommando
+  R258 = R254 - R253
+
+  ; Ausgabe in der Textdatei
+  _TXT_DATA = _j <<" "<< _i <<" "<< _MUMO_NR <<" "<< R255 << " " << R256 << " " << R257 << " " << R258
+  WRITE(_I_ERROR,_FilePathName, _TXT_DATA)
+  
+  _ZAEHL = _ZAEHL + 1
+
+RET
+
+; ----- Hilfsroutine, um Zeilenzahl < 50 zu halten
+CHECK_LOG:
+STOPRE
+  G4 F0.5
+IF _ZAEHL < 50
+  RET
+ELSE
+  _ZAEHL = 0
+  _n_LOG = _n_LOG + 1
+  _FilePathName = $P_PROGPATH << _LogFolder << "/" << _LogFileName <<"_"<< _today <<"_"<< _n_LOG
+  REPEAT WRITE_HEADER ENDLABEL
+ENDIF
+RET
+
+; ---- Figuraufruf in RAM
+CALL_FIGURE:
+  ; Figur aus PLC_autoload-Verzeichnis laden
+  ; (<Start-Nr.bxy>, <Fig.-Nr.-MuMo>, <Generator>, <Anz. Folgende>)
+  FIG_LOAD(_j, _MUMO_NR, 0, 1)
+
+RET
+
+; ---- Generisch in dem RAM geschriebene Figur laden & ausloesen
+LOAD_FIGURE:
+   ; Figur auf Platz <_MUMU_Nr> laden
+   WRT(S_FIG, _MUMO_NR, S_FRQ,0, S_SWX,0.1, S_SWY,0.1)
+   SNS
+   
+   WRT(S_PVZH,10,S_PVZL,0)
+   SNS
+
+RET
+
+
+; ----- Entlade die Figuren
+CLEAR_RAM:
+  MSG("Bereinige RAM")
+  ; Schreibe auf die beiden Figurplaetze der MuMo eine kleine Figur, um Ladezeiten nicht zu verfaelschen
+  FIG_LOAD(_NrSmallFig, _MuMo_Nr_1, 0, 1)
+  FIG_LOAD(_NrSmallFig, _MuMo_Nr_2, 0, 1)
+
+  ; wiederhole 2x zur Sicherheit
+  FIG_LOAD(_NrSmallFig, _MuMo_Nr_1, 0, 1)
+  FIG_LOAD(_NrSmallFig, _MuMo_Nr_2, 0, 1)
+
+  FIG_LOAD(_NrSmallFig, _MuMo_Nr_1, 0, 1)
+  FIG_LOAD(_NrSmallFig, _MuMo_Nr_2, 0, 1)
+
+
+RET
+
+
+; ----- Multimode-Figurnummer switchen 
+SWITCH_MUMO_NR:
+  IF _MUMO_SWITCH
+    STOPRE
+    G4 F0.5
+    _MUMO_SWITCH = 0
+    _MUMO_NR = _MuMo_Nr_2
+  ELSE
+    STOPRE
+    G4 F0.5
+    _MUMO_SWITCH = 1
+    _MUMO_NR = _MuMo_Nr_1
+  ENDIF
+
+RET
+
